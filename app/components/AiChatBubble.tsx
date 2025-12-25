@@ -29,38 +29,7 @@ export default function AiChatBubble() {
 
     const sendMessage = async () => {
 
-        const userMessage = input.trim()
-        if (!userMessage) return
-        setInput('')
-
-        // 1Add user message immediately
-        setMessages(prev => [
-            ...prev,
-            { role: 'user', text: userMessage },
-            { role: 'assistant', text: "Generating" },
-        ])
-
-        const response = await runAgent(userMessage, sessionIdRef.current ?? 'default')
-
-        setMessages(prev => {
-            const updated = [...prev]
-            const lastIndex = updated.length - 1
-
-            if (updated[lastIndex]?.role === 'assistant') {
-                updated[lastIndex] = {
-                    role: 'assistant',
-                    text: response.response,
-                }
-            }
-
-            return updated
-        })
-
-        if (response.redirectPath) {
-            router.push(response.redirectPath)
-        }
         // const userMessage = input.trim()
-
         // if (!userMessage) return
         // setInput('')
 
@@ -71,42 +40,75 @@ export default function AiChatBubble() {
         //     { role: 'assistant', text: "Generating" },
         // ])
 
-        // // 2️⃣ Call the route
-        // const response = await fetch("/api/ollama", {
-        //     method: "POST",
-        //     headers: { "Content-Type": "application/json" },
-        //     body: JSON.stringify({ question: userMessage }),
+        // const response = await runAgent(userMessage, sessionIdRef.current ?? 'default')
+
+        // setMessages(prev => {
+        //     const updated = [...prev]
+        //     const lastIndex = updated.length - 1
+
+        //     if (updated[lastIndex]?.role === 'assistant') {
+        //         updated[lastIndex] = {
+        //             role: 'assistant',
+        //             text: response.response,
+        //         }
+        //     }
+
+        //     return updated
         // })
 
-        // if (!response.body) return
-
-        // // 3️⃣ Stream the response
-        // const reader = response.body
-        //     .pipeThrough(new TextDecoderStream())
-        //     .getReader()
-
-        // let accumulatedText = ""
-
-        // while (true) {
-        //     const { value, done } = await reader.read()
-        //     if (done) break
-        //     accumulatedText += value ?? ""
-
-        //     // 4️⃣ Update only the LAST assistant message
-        //     setMessages(prev => {
-        //         const updated = [...prev]
-        //         const lastIndex = updated.length - 1
-
-        //         if (updated[lastIndex]?.role === 'assistant') {
-        //             updated[lastIndex] = {
-        //                 role: 'assistant',
-        //                 text: accumulatedText,
-        //             }
-        //         }
-
-        //         return updated
-        //     })
+        // if (response.redirectPath) {
+        //     router.push(response.redirectPath)
         // }
+
+        {/* STREAM METHOD */ }
+        const userMessage = input.trim()
+
+        if (!userMessage) return
+        setInput('')
+
+        // 1Add user message immediately
+        setMessages(prev => [
+            ...prev,
+            { role: 'user', text: userMessage },
+            { role: 'assistant', text: "Generating" },
+        ])
+
+        // 2️⃣ Call the route
+        const response = await fetch("/api/ollama", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ inputMessage: userMessage }),
+        })
+
+        if (!response.body) return
+
+        // 3️⃣ Stream the response
+        const reader = response.body
+            .pipeThrough(new TextDecoderStream())
+            .getReader()
+
+        let accumulatedText = ""
+
+        while (true) {
+            const { value, done } = await reader.read()
+            if (done) break
+            accumulatedText += value ?? ""
+
+            // 4️⃣ Update only the LAST assistant message
+            setMessages(prev => {
+                const updated = [...prev]
+                const lastIndex = updated.length - 1
+
+                if (updated[lastIndex]?.role === 'assistant') {
+                    updated[lastIndex] = {
+                        role: 'assistant',
+                        text: accumulatedText,
+                    }
+                }
+
+                return updated
+            })
+        }
 
     }
 

@@ -62,11 +62,6 @@ export default async function runAgent(
         }
 
         // Tool call deltas
-        if (chunk.tool_calls?.length) {
-            for (const tc of chunk.tool_calls) {
-                finalToolCalls.push(tc);
-            }
-        }
     }
 
     const finalMessage = new AIMessage({
