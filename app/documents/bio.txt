@@ -1,0 +1,28 @@
+Name: João Fernando
+
+Origin:
+Born in Brazil.
+
+Immigration:
+Moved to Canada in 2019.
+
+Background:
+Since moving to Canada, João has been studying and working hard toward building a better future.
+
+Current Focus:
+João is currently studying programming and building software projects with a strong focus on artificial intelligence.
+
+Technical Interests:
+João is particularly interested in artificial intelligence, large language models, backend systems, and modern web development.
+
+Motivation:
+AI is the main reason João chose programming. Large Language Models changed how he understands what artificial intelligence can do.
+
+Mindset:
+João enjoys problem-solving, system design, and learning through experimentation.
+
+Values:
+Curiosity, consistency, hard working and long-term growth.
+
+Long-Term Goal:
+João wants to build meaningful AI-powered tools that create real value for people.

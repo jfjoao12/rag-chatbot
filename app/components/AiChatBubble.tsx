@@ -35,7 +35,7 @@ export default function AiChatBubble() {
         const response = await fetch("/api/ollama", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: userMessage }),
+            body: JSON.stringify({ question: userMessage }),
         })
 
         if (!response.body) return
