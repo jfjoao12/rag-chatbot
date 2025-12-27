@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx app/scripts/ingest.ts"
   },
   "dependencies": {
     "@langchain/community": "^1.1.1",

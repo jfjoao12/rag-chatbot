@@ -2,7 +2,6 @@ import { vectorStore } from "../lib/rag";
 import { DirectoryLoader } from "@langchain/classic/document_loaders/fs/directory";
 import { TextLoader } from "@langchain/classic/document_loaders/fs/text";
 import { RecursiveCharacterTextSplitter } from "@langchain/classic/text_splitter";
-import { projectCompilationEventsSubscribe } from "next/dist/build/swc/generated-native";
 
 async function run() {
     console.log("Loading Documents")

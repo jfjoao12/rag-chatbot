@@ -20,7 +20,7 @@ export const embeddings = new OllamaEmbeddings({
 // 3. Setup Ollama LLM (for generating answers)
 export const llm = new ChatOllama({
     model: "llama3.2:latest",
-    temperature: 0.8,
+    temperature: 0,
     baseUrl: "http://localhost:11434",
 })
 

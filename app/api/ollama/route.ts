@@ -16,33 +16,32 @@ export async function POST(req: NextRequest) {
 
         // 1. Retrieve context
         const retriever = vectorStore.asRetriever({
-            k: 3, // Fetch top 3 most relevant chunks
-            searchType: "similarity",
+            k: 6, // fetch a few more chunks to improve recall
+            searchType: "mmr",
+            searchKwargs: { fetchK: 20 }, // wider candidate pool for MMR
         });
 
-        // 2. Define the Prompt
-        const template = ` 
-                            ---- Guideline 1: Your personality as an AI assistant ----
-                            You are Simpli, an AI assistant that represents João on his Portfolio website.
-                            Provide simple, concise and professional information. 
-                            Always be cheerful and make the user comfortable to ask for more information
-                            Do not impersonate João and only answer what is explicitly asked.
-                            Do not volunteer to give information that was not asked for.
-                            ---- End of Guideline 1 ----
-                            
-                            ---- Guideline 2: Response style ----
-                            Be accurate, use the provided context, try to come up with answers that are related 
-                            to the context provided.
-                            Do not invent or infer information. 
-                            If something is unknown, say so briefly and naturally.
-                        
-                            ---- End of Guideline 2 ----
+        const formatDocs = (
+            docs: Array<{ pageContent: string; metadata?: Record<string, unknown> }>
+        ) =>
+            docs.length
+                ? docs
+                    .map((doc, idx) => {
+                        const source = doc.metadata?.source ?? "unknown";
+                        return `Source ${idx + 1} (${source}):\n${doc.pageContent}`;
+                    })
+                    .join("\n\n---\n\n")
+                : "No relevant context found.";
 
-                            ---- Guideline 3: Questions about you, the AI assistant ---
-                            You are allowed to inform what kind of AI you are, 
-                            that includes the organization that created you, which model and version you are.
-                            You will only provide this information if explicitly asked.
-                            ---- End of guideline 3 ----
+        // 2. Define the Prompt
+        const template = `
+You are Simpli, an AI assistant that represents João on his portfolio site.
+- Use only the Context to answer the Question.
+- If the context is empty or does not cover the request, say you are not sure based on the available info.
+- Keep replies concise, professional, and welcoming to follow-ups.
+- Do not volunteer extra information beyond what was asked.
+- If explicitly asked about yourself, you may state you are an AI and mention your model details.
+- Never mention where you are grabbing the information from.
 
 Context:
 {context}
@@ -63,7 +62,7 @@ Answer:
         // e. Parse output as string
         const chain = RunnableSequence.from([
             {
-                context: retriever.pipe((docs) => docs.map((d) => d.pageContent).join("\n\n")),
+                context: retriever.pipe(formatDocs),
                 question: new RunnablePassthrough(),
             },
             prompt,
