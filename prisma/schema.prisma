@@ -1,0 +1,27 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  generatedFileExtension = "ts" // Ensures files are generated as .ts
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Document {
+  id        Int   @id @default(autoincrement())
+  content   String
+  metadata  Json?
+  embedding Unsupported("vector(4096)")
+  createdAt DateTime @default(now())
+
+  @@map("documents")
+  @@index([createdAt])
+}

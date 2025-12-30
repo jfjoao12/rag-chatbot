@@ -1,0 +1,65 @@
+JOAO FERNANDO MAGALHAES – PROFESSIONAL BACKGROUND
+
+SUMMARY
+Joao Fernando Magalhaes is a Business Information Technology student with experience in software development, project coordination, IT support, and customer-facing technical roles. He works well in teams, seeks feedback, and focuses on continuous improvement.
+Joao currently works in two jobs: Cell Mechanics as a Cellphone Repair Technician and as a Student Developer at RRC. 
+
+
+WORK EXPERIENCE
+
+RRC ACE PROJECT SPACE – Developer and Project Manager Intern (CURRENT JOB)
+Joao worked on an AI-powered web application using:
+- Next.js, TypeScript
+- Prisma ORM, PostgreSQL
+- Tailwind and Motion
+- Claude-based automation and local-model workflows (Ollama)
+
+Responsibilities included:
+- Building features for email analysis, classification, summarization, and automation tooling
+- Implementing backend logic for AI-driven workflows
+- Acting as project manager for a small development team
+- Assigning tasks and maintaining team delivery using agile practices
+- Leading meetings and facilitating productive collaboration
+
+CELL MECHANICS – Cellphone Repair Technician (CURRENT JOB)
+Joao repairs phones and tablets by diagnosing issues and replacing parts.
+He provides accurate quotes and timelines and supports customers with:
+- Android and iOS software troubleshooting
+- Hardware and device configuration issues
+He relies on strong communication, active listening, and structured troubleshooting.
+
+SKIPTHEDISHES / MENULOG – Senior Customer Support Specialist
+Joao monitored productivity and attendance during peak operations using real-time metrics.
+He supported onboarding by shadowing and coaching new team members through correct procedures and support best practices.
+
+UNITED WAY WINNIPEG – End User Support Intern
+Joao provided internal helpdesk support across:
+- Windows, macOS, Android, iOS
+- Desktop applications and network troubleshooting
+He updated older laptops by reinstalling newer Windows versions to improve security and stability.
+He tracked hardware asset data (e.g., serial numbers) in a Windows Server Active Directory environment.
+
+EDUCATION
+
+RRC POLYTECH – Business Information Technology (Final Term), Winnipeg, MB
+Study areas include:
+- Web development: Next.js, TypeScript, Tailwind CSS, Motion, JavaScript, PHP, Ruby on Rails, HTML, CSS
+- Mobile development: Kotlin, Jetpack Compose
+- Desktop development: Kotlin Multiplatform, C#, Java
+- Databases: SQL, PostgreSQL, MySQL, SQLite, Prisma ORM, Room (Android)
+- Other: Network computing, system analysis, business math, professional development
+
+LOUIS RIEL ARTS & TECHNOLOGY CENTRE – Winnipeg, MB
+Training included:
+- PC hardware and software fundamentals
+- Windows Server fundamentals
+- Linux essentials
+- Networking fundamentals
+- Cybersecurity fundamentals
+
+PERSONAL PROJECTS (HIGH-LEVEL)
+Joao has built and maintained personal technical projects including:
+- A personal gaming desktop build
+- A personal Ubuntu server used for running multiple applications
+- Device and computer repair projects (laptops and desktops)
+- Software projects such as an Android repair ticketing system, an IPSW downloader, and a Rick and Morty wiki app

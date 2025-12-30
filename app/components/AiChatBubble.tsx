@@ -11,24 +11,23 @@ type ChatMessage = {
 }
 
 export default function AiChatBubble() {
-    const [openChat, setOpenChat] = useState(false)
-    const [text, setText] = useState("")
-    const [aiText, setAiText] = useState("Loading...")
+    const [isChatOpen, setIsChatOpen] = useState(false)
+    const [input, setInput] = useState('')
     const [messages, setMessages] = useState<ChatMessage[]>([])
 
-    const toggleChat = () => setOpenChat(open => !open)
+    const toggleChat = () => setIsChatOpen(open => !open)
 
-    const handleSend = async () => {
-        if (!text.trim()) return
+    const sendMessage = async () => {
+        const userMessage = input.trim()
 
-        const userMessage = text
-        setText("")
+        if (!userMessage) return
+        setInput('')
 
-        // 1️⃣ Add user message immediately
+        // 1Add user message immediately
         setMessages(prev => [
             ...prev,
             { role: 'user', text: userMessage },
-            { role: 'assistant', text: "" }, // placeholder for streaming AI
+            { role: 'assistant', text: "Generating" },
         ])
 
         // 2️⃣ Call the route
@@ -67,15 +66,28 @@ export default function AiChatBubble() {
                 return updated
             })
         }
+
+    }
+
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        void sendMessage()
+    }
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+            void sendMessage()
+        }
     }
 
     return (
         <div className="fixed bottom-6 right-6 z-50">
-            {openChat && (
-                <div className="fixed inset-0 z-40" role="dialog" aria-modal>
+            {isChatOpen && (
+                <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
                     <div className="absolute inset-0 bg-black/40" onClick={toggleChat} />
                     <div className="absolute right-6 bottom-20 top-6 w-96 max-w-full rounded-2xl bg-white/5 backdrop-blur-[2px] flex flex-col">
-                        <div className="flex items-center justify-between border-b px-4 py-3 ">
+                        <div className="flex items-center justify-between border-b px-4 py-3">
                             <span className="text-sm font-medium">AI Chat</span>
                             <button type="button" onClick={toggleChat} className="p-1">
                                 <X className="h-4 w-4" />
@@ -94,22 +106,25 @@ export default function AiChatBubble() {
                                     )}
                                 </div>
 
-                                <div className='flex justify-center items-center gap-2'>
+                                <form onSubmit={handleSubmit} className="flex items-end gap-2 rounded-lg border bg-white/5 p-2">
                                     <textarea
-                                        name="asd"
-                                        id="adasd"
-                                        className='p-2 resize-none w-full rounded-lg'
-                                        placeholder='Ask me anything about João'
-                                        value={text}
-                                        onChange={(e) => setText(e.target.value)}
+                                        name="message"
+                                        id="message"
+                                        placeholder="Ask me anything about João"
+                                        value={input}
+                                        onChange={event => setInput(event.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        className="w-full resize-none bg-transparent outline-none"
+                                        rows={2}
                                     />
                                     <button
-                                        className='border-2 p-2 rounded-full'
-                                        onClick={handleSend}
+                                        type="submit"
+                                        className="flex h-10 w-10 items-center justify-center rounded-full border-2"
+                                        aria-label="Send message"
                                     >
                                         <SendHorizonalIcon />
                                     </button>
-                                </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -120,7 +135,7 @@ export default function AiChatBubble() {
                 role="button"
                 tabIndex={0}
                 aria-label="Open AI chat"
-                aria-expanded={openChat}
+                aria-expanded={isChatOpen}
                 onClick={toggleChat}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleChat()}
                 className="flex h-12 w-12 items-center justify-center rounded-full border-2 bg-white shadow-lg transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500"

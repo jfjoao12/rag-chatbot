@@ -1,0 +1,91 @@
+JOAO FERNANDO MAGALHAES – PROGRAMMING AND AI SKILLS
+
+GENERAL SOFTWARE DEVELOPMENT PROFILE
+Joao is a software developer with experience across frontend, backend, databases, and AI-powered systems. He prefers practical, real-world applications and learns through hands-on experimentation.
+
+PROGRAMMING LANGUAGES
+Primary languages:
+- TypeScript
+- JavaScript
+- Kotlin
+- Java
+- PHP
+
+FRONTEND DEVELOPMENT
+Joao builds modern user interfaces using:
+- React
+- Next.js
+- Jetpack Compose
+
+He values:
+- Clean UI design
+- Accessibility
+- Good user experience
+He enjoys refining layouts, interactions, and visual details to improve usability.
+
+MOBILE DEVELOPMENT
+Joao enjoys Android development and prefers Jetpack Compose for its declarative model.
+He focuses on building responsive layouts connected to solid application logic.
+
+BACKEND DEVELOPMENT
+Joao builds backend systems with Node.js and server-side logic, including:
+- API route implementation
+- Authentication flows
+- Data flow between services
+- Third-party API integrations
+
+DATABASE EXPERIENCE
+Joao works primarily with relational databases, especially PostgreSQL.
+He has experience with schema design and ORMs such as Prisma.
+On Android, he uses Room for local database storage.
+
+ARTIFICIAL INTELLIGENCE EXPERIENCE
+Joao has hands-on experience integrating LLMs into applications, including local and cloud-based models.
+He has experience with:
+- Prompt design
+- Retrieval-Augmented Generation (RAG)
+- Vector databases and embeddings
+- Cost-aware AI system design
+- LangChain-style workflows
+
+CLOUD AND DEVOPS EXPERIENCE
+Joao has experience deploying applications to:
+- Vercel
+- AWS
+- DigitalOcean
+
+He has worked with:
+- Virtual machines
+- Storage solutions
+- Backups and recovery strategies
+- Monitoring
+
+OPERATING SYSTEMS AND DEVELOPMENT TOOLS
+Joao is comfortable working across:
+- Windows
+- Linux
+- Windows Subsystem for Linux (WSL)
+
+Common tools:
+- Git
+- Docker
+- Visual Studio Code
+- Android Studio
+- Terminal-based workflows
+
+TERMINAL PREFERENCE
+Joao prefers Linux-based terminal workflows over PowerShell for development, scripting, and system tasks.
+
+PROBLEM-SOLVING APPROACH
+Joao approaches technical problems methodically:
+- Breaks complex systems into smaller parts
+- Debugs step by step
+- Validates assumptions through testing
+
+He values maintainability, clarity, and continuous improvement.
+
+LEARNING STYLE
+Joao learns best through experimentation:
+- Building projects
+- Trying new tools
+- Iterating and refining solutions over time
