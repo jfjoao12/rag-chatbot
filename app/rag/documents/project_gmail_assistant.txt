@@ -1,0 +1,104 @@
+AI GMAIL ASSISTANT — RAG-FRIENDLY PROJECT BRIEF (for hiring / portfolio ingestion)
+Last updated: 2025-12-31
+
+PROJECT NAME
+AI Gmail Assistant (project name withheld due to NDA)
+
+ONE-LINE SUMMARY
+An AI-powered Gmail assistant platform that helps users triage inboxes by summarizing, labeling/categorizing, and drafting reply suggestions—using RAG + tool-aware LLM flows with configurable user preferences. (Public name withheld due to NDA.)
+
+PROBLEM IT SOLVES
+Modern inboxes are overwhelming.
+Users lose time reading long threads, deciding what matters, and writing repetitive replies.
+AI Gmail Assistant aims to reduce cognitive load and speed up email workflows while keeping the user in control.
+
+WHAT ROBINBOX DOES (CORE FEATURES)
+- Gmail sync: Pulls messages and threads via Gmail API (OAuth-based access).
+- AI summaries: Generates concise, helpful summaries of emails/threads.
+- Importance detection: Flags what matters based on user-defined priorities (not hardcoded).
+- Labeling & categorization: Suggests or applies labels/rules (e.g., “Important”, “Receipts”, “School”, “Work”, “Spam-like”).
+- Reply drafting: Suggests replies in a chosen tone and style.
+- Custom rules: Users can configure what “important” means, archiving rules, tone rules, and labeling directives.
+- Onboarding wizard: A multi-step UI (“DirectivesForm”) that collects user preferences and turns them into structured settings for the AI.
+
+TECH STACK (IMPLEMENTED / USED IN DEVELOPMENT)
+Frontend:
+- Next.js (React) + TypeScript
+- Tailwind CSS (custom design tokens / palette used throughout)
+- Motion
+
+Backend / Data:
+- Next.js API routes / server-side logic (Node.js runtime)
+- Prisma ORM
+- PostgreSQL database (local development via WSL/Linux setup; designed with migration/hosted deployment in mind)
+
+AI / Agentic Layer:
+- Mix of local + cloud LLM experimentation:
+  - Local (early prototyping only): Ollama-based models were used at the beginning of development for fast iteration.
+  - Later development: moved toward ClaudeAI, with cost awareness.
+- Tool definitions for structured actions (examples below)
+
+AI WORKFLOW OVERVIEW (HIGH-LEVEL)
+1) Sync + normalize Gmail messages/threads
+2) Run a tool-aware LLM step:
+   - Summarize (grounded in retrieved content)
+   - Suggest label(s) or rule application
+   - Draft reply in specified tone and constraints
+3) Persist outcomes (summaries, labels, settings, token usage) for continuity and analytics
+
+EXAMPLES OF “TOOLING” CONCEPTS USED (TO SHOW ENGINEERING MATURITY)
+AI Gmail Assistant is designed around composable, explicit tools rather than a single prompt.
+Common tool-like modules or generators:
+- generateDirectives: converts onboarding answers into actionable AI instructions
+- generateImportantSettings: formalizes “what counts as important” for the user
+- generateArchiveSettings: formalizes “what can be archived” conditions
+- generateToneSettings: produces consistent tone constraints for reply drafts
+- generateLabelDirective: maps email patterns → labels and confidence/justification
+
+(Names may differ depending on branch/version; purpose is consistent.)
+
+UX / PRODUCT DESIGN EMPHASIS
+- Calm, minimal, “cozy productivity” UI aesthetic
+- Strong attention to interaction details (labels as pills, micro-interactions, visual hierarchy)
+- Accessibility considered in UI components (e.g., meaningful semantics, non-disruptive enhancements)
+- User control is a priority: preferences are explicit and configurable, not opaque
+
+ENGINEERING CHALLENGES ADDRESSED
+- Gmail data synchronization: threads vs messages, deduplication, label mapping
+- Token/cost awareness: tracking usage signals for budgeting and optimization
+- Database modeling: scalable schema that supports automation, auditability, and future features
+
+WHAT THIS PROJECT DEMONSTRATES TO EMPLOYERS (HIRING SIGNALS)
+Full-stack capability:
+- Modern React/Next.js frontend and server-side API routes
+- TypeScript across the stack
+- Prisma + Postgres relational modeling and disciplined data constraints
+
+AI engineering fundamentals:
+- Practical RAG pipeline design (retrieval, grounding, summarization)
+- Tool-aware LLM workflows (structured outputs, action modules, guardrails)
+- Iteration with local LLMs (performance/cost tradeoffs) and provider flexibility
+
+Product + client-facing strength:
+- Built with real user workflow in mind (inbox triage is a concrete pain point)
+- Onboarding designed to translate user intent into deterministic settings
+- Emphasis on clarity, usability, and maintainable logic
+
+Operations mindset:
+- Works comfortably in Linux/WSL-based dev environments
+- Thinks about deployment readiness and reliability (not just demos)
+
+ROLE & RESPONSIBILITIES (OWNER / PRIMARY CONTRIBUTOR)
+- Full-stack developer: UI, API routes, database design, RAG + agent integration
+- Project management / client-facing facilitation (stakeholder communication, requirements translation)
+- Technical decision-making: architecture, modeling, AI workflow design, UX direction
+
+RECRUITER / INTERVIEWER NOTES (FAST SCAN)
+Keywords:
+Next.js, TypeScript, Prisma, PostgreSQL, Gmail API, OAuth, tool calling, summarization, label automation, onboarding wizard, UX, accessibility, cost tracking, LLM ops.
+
+Suggested interview deep-dives:
+- How Gmail threads/messages were modeled and synced (constraints + upserts)
+- How tool boundaries reduce hallucination and improve determinism
+- How user preferences are represented as settings/rules and applied consistently
+- How token usage/cost tracking is captured and used to guide optimization

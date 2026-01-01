@@ -5,13 +5,14 @@ import { DirectoryLoader } from "@langchain/classic/document_loaders/fs/director
 import { TextLoader } from "@langchain/classic/document_loaders/fs/text";
 import { RecursiveCharacterTextSplitter } from "@langchain/classic/text_splitter";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import prisma from "../lib/prisma-client";
 
 async function run() {
-    const { vectorStore } = await import("../lib/rag");
+    const { vectorStore } = await import("../rag/rag");
     console.log("Loading Documents")
 
     // 1. Load docs form a folder named 'documents' in root
-    const loader = new DirectoryLoader("./app/documents", {
+    const loader = new DirectoryLoader("./app/rag/documents", {
         ".txt": (path) => new TextLoader(path),
         ".pdf": (path) => new PDFLoader(path, { splitPages: false }),
     })
@@ -20,13 +21,16 @@ async function run() {
 
     // 2. Split text into manageable chunks
     const splitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 128,
-        chunkOverlap: 80,
+        chunkSize: 512,
+        chunkOverlap: 50,
     })
 
     const splitDocs = await splitter.splitDocuments(docs)
 
     console.log(`Split into ${splitDocs.length} chunks. Embedding and storing...`)
+
+    await prisma.$executeRaw`TRUNCATE TABLE "documents"`;
+
 
     await vectorStore.addDocuments(splitDocs)
 

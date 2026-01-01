@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { MessageCircleIcon, X, SendHorizonalIcon } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { MessageCircleIcon, X, SendHorizonalIcon, SendIcon } from 'lucide-react'
 import UserChatMessage from './UserChatMessage'
 import AiChatMessage from './AiChatMessage'
+import runAgent from '../ai/agent'
+import { useRouter } from 'next/navigation'
 
 type ChatMessage = {
     role: 'user' | 'assistant'
@@ -11,15 +13,23 @@ type ChatMessage = {
 }
 
 export default function AiChatBubble() {
+    const router = useRouter()
+    const sessionIdRef = useRef<string | null>(null)
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [input, setInput] = useState('')
     const [messages, setMessages] = useState<ChatMessage[]>([])
 
+    if (!sessionIdRef.current) {
+        sessionIdRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2)
+    }
+
     const toggleChat = () => setIsChatOpen(open => !open)
 
     const sendMessage = async () => {
-        const userMessage = input.trim()
 
+        const userMessage = input.trim()
         if (!userMessage) return
         setInput('')
 
@@ -30,42 +40,73 @@ export default function AiChatBubble() {
             { role: 'assistant', text: "Generating" },
         ])
 
-        // 2️⃣ Call the route
-        const response = await fetch("/api/ollama", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: userMessage }),
+        const response = await runAgent(userMessage, sessionIdRef.current ?? 'default')
+
+        setMessages(prev => {
+            const updated = [...prev]
+            const lastIndex = updated.length - 1
+
+            if (updated[lastIndex]?.role === 'assistant') {
+                updated[lastIndex] = {
+                    role: 'assistant',
+                    text: response.response,
+                }
+            }
+
+            return updated
         })
 
-        if (!response.body) return
-
-        // 3️⃣ Stream the response
-        const reader = response.body
-            .pipeThrough(new TextDecoderStream())
-            .getReader()
-
-        let accumulatedText = ""
-
-        while (true) {
-            const { value, done } = await reader.read()
-            if (done) break
-            accumulatedText += value ?? ""
-
-            // 4️⃣ Update only the LAST assistant message
-            setMessages(prev => {
-                const updated = [...prev]
-                const lastIndex = updated.length - 1
-
-                if (updated[lastIndex]?.role === 'assistant') {
-                    updated[lastIndex] = {
-                        role: 'assistant',
-                        text: accumulatedText,
-                    }
-                }
-
-                return updated
-            })
+        if (response.redirectPath) {
+            router.push(response.redirectPath)
         }
+        // const userMessage = input.trim()
+
+        // if (!userMessage) return
+        // setInput('')
+
+        // // 1Add user message immediately
+        // setMessages(prev => [
+        //     ...prev,
+        //     { role: 'user', text: userMessage },
+        //     { role: 'assistant', text: "Generating" },
+        // ])
+
+        // // 2️⃣ Call the route
+        // const response = await fetch("/api/ollama", {
+        //     method: "POST",
+        //     headers: { "Content-Type": "application/json" },
+        //     body: JSON.stringify({ question: userMessage }),
+        // })
+
+        // if (!response.body) return
+
+        // // 3️⃣ Stream the response
+        // const reader = response.body
+        //     .pipeThrough(new TextDecoderStream())
+        //     .getReader()
+
+        // let accumulatedText = ""
+
+        // while (true) {
+        //     const { value, done } = await reader.read()
+        //     if (done) break
+        //     accumulatedText += value ?? ""
+
+        //     // 4️⃣ Update only the LAST assistant message
+        //     setMessages(prev => {
+        //         const updated = [...prev]
+        //         const lastIndex = updated.length - 1
+
+        //         if (updated[lastIndex]?.role === 'assistant') {
+        //             updated[lastIndex] = {
+        //                 role: 'assistant',
+        //                 text: accumulatedText,
+        //             }
+        //         }
+
+        //         return updated
+        //     })
+        // }
 
     }
 
@@ -125,11 +166,20 @@ export default function AiChatBubble() {
                                         <SendHorizonalIcon />
                                     </button>
                                 </form>
+                                <div
+
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border-2"
+                                    aria-label="Send message"
+                                    onClick={() => router.push("/test")}
+                                >
+                                    <SendIcon />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             <div
                 role="button"
@@ -142,6 +192,6 @@ export default function AiChatBubble() {
             >
                 <MessageCircleIcon />
             </div>
-        </div>
+        </div >
     )
 }

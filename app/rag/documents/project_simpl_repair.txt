@@ -1,0 +1,58 @@
+PROJECT: SIMPL REPAIR (Android Phone-Repair Workflow App - IN DEVELOPMENT)
+
+OVERVIEW
+Simpl Repair is an experimental in development Android app that streamlines the daily workflow of a phone repair shop. It replaces “paper tickets + scattered notes + memory” with a structured repair pipeline:
+Intake → Diagnosis → Parts → Repair → Ready → Pickup/Closed.
+Goal: faster handling, fewer mistakes, clearer handoffs between staff, and consistent repair tracking.
+
+PROBLEM / CONTEXT
+Repair shops lose time and accuracy when repair details are spread across paper tickets, text messages, and informal notes. This causes missing information, incorrect parts ordering, inconsistent pricing notes, unclear status ownership, and slow shift handoffs. Simpl Repair centralizes repair tickets and status tracking so anyone on shift can instantly understand each repair’s state and next action.
+
+CORE FEATURES
+
+1) Repair Ticket Creation (Intake)
+- Customer fields: name, phone/email (optional fields supported)
+- Device fields: brand/model, serial/IMEI notes, color/storage notes
+- Issue description + symptoms
+- Intake checklist notes (examples: “screen cracked”, “no power”, “charging issue”)
+- Optional attachments/notes capability (implementation-dependent)
+
+2) Repair Workflow Status Tracking
+- Status stages (example): New, Diagnosing, Waiting for Parts, In Repair, Ready, Picked Up, Closed
+- One-tap status updates from the ticket screen
+- Filtering/sorting by status to focus technician workflow and reduce context switching
+
+3) Detailed Repair Notes
+- Technician notes: diagnostics performed, findings, steps taken
+- Parts tracking: part name, cost, supplier notes
+- Pricing/estimate notes kept internal by default
+
+4) Search + Organization
+- Search by customer and device keywords
+- Sorting by newest/oldest, status, and priority
+- “At-a-glance” list view optimized for busy store environments
+
+TECH STACK (HIRING-RELEVANT)
+- Language: Kotlin
+- UI: Jetpack Compose (state-driven declarative UI)
+- Persistence: Room database (offline-first local storage)
+- Architecture: clear separation between UI/state and data layer (maintainable structure)
+- Accessibility: predictable navigation and screen-reader friendly UI considerations
+- Testability: logic boundaries designed to support unit testing around state and database operations
+
+HIRING SIGNALS / WHY THIS PROJECT MATTERS
+- Real-world domain fit: built around an actual repair shop workflow (intake pressure, frequent context switching, shift handoffs)
+- End-to-end delivery: product thinking + implementation (screens, data modeling, interactions, persistence)
+- UI/UX focus: fast operation, minimal taps, clear status visibility
+- Maintainable engineering: Compose + Room with clean boundaries; designed to be extendable in a team environment
+
+POTENTIAL EXTENSIONS (ROADMAP)
+- Cloud sync for multi-device / multi-staff support
+- Role-based access (admin vs technician)
+- Analytics (repair turnaround time, backlog counts, parts waiting list)
+- Optional customer-facing status updates (controlled messaging)
+- Attachments (photos of damage, invoice images)
+- Export/backup (CSV/PDF summaries)
+
+ONE-LINE PORTFOLIO PITCH
+Simpl Repair is a Kotlin + Jetpack Compose + Room Android project app that aims to model a real small phone-repair shop workflow, enabling repair ticket intake, status tracking, searchable repair history, and structured technician notes—built with usability, maintainability, and real operational constraints in mind.
