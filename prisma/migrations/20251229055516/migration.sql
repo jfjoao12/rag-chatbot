@@ -12,7 +12,7 @@ CREATE TABLE "documents" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "metadata" JSONB,
-    "embedding" vector(1024) NOT NULL,
+    "embedding" vector(3072) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "documents_pkey" PRIMARY KEY ("id")

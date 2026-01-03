@@ -18,17 +18,17 @@ export const pool = new Pool({
 })
 
 // 2. Setup Ollama Embeddings (for convering text to numbers)
-export const embeddings = new OllamaEmbeddings({
-    dimensions: 3072,
-    model: "qwen3-embedding:8b",
-    baseUrl: "http://localhost:11434",
-})
-
-// export const embeddings = new GoogleGenerativeAIEmbeddings({
-//     apiKey: process.env.GOOGLE_API_KEY!,
-//     model: "gemini-embedding-001",
-
+// export const embeddings = new OllamaEmbeddings({
+//     dimensions: 3072,
+//     model: "qwen3-embedding:8b",
+//     baseUrl: "http://localhost:11434",
 // })
+
+export const embeddings = new GoogleGenerativeAIEmbeddings({
+    apiKey: process.env.GOOGLE_API_KEY!,
+    model: "gemini-embedding-001",
+
+})
 
 // 3. Setup Ollama LLM (for generating answers)
 // export const llm = new ChatOllama({
