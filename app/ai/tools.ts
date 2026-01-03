@@ -3,8 +3,6 @@
 import { vectorStore } from "@/app/rag/rag";
 import { tool } from "@langchain/core/tools";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { redirect } from "next/navigation";
-import { queryObjects } from "v8";
 import * as z from "zod";
 
 const retrieveSchema = z.object({ query: z.string() });
