@@ -1,11 +1,16 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { MessageCircleIcon, X, SendHorizonalIcon, SendIcon } from 'lucide-react'
 import UserChatMessage from './UserChatMessage'
 import AiChatMessage from './AiChatMessage'
-import runAgent from '../ai/agent'
+import { useStream, FetchStreamTransport } from "@langchain/langgraph-sdk/react";
 import { useRouter } from 'next/navigation'
+import { AIMessage, Message, ToolMessage } from '@langchain/core/messages'
+import { ToolCallBubble, type ToolCallState } from "./ToolCall";
+
+import { isAIMessage, isToolMessage, isHumanMessage, extractTextContent } from "../utils/ai_utils";
+import { ToolCall } from 'langchain'
 
 type ChatMessage = {
     role: 'user' | 'assistant'
@@ -17,7 +22,7 @@ export default function AiChatBubble() {
     const sessionIdRef = useRef<string | null>(null)
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [input, setInput] = useState('')
-    const [messages, setMessages] = useState<ChatMessage[]>([])
+
 
     if (!sessionIdRef.current) {
         sessionIdRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -27,102 +32,139 @@ export default function AiChatBubble() {
 
     const toggleChat = () => setIsChatOpen(open => !open)
 
-    const sendMessage = async () => {
 
-        // const userMessage = input.trim()
-        // if (!userMessage) return
-        // setInput('')
+    // const userMessage = input.trim()
+    // if (!userMessage) return
+    // setInput('')
 
-        // // 1Add user message immediately
-        // setMessages(prev => [
-        //     ...prev,
-        //     { role: 'user', text: userMessage },
-        //     { role: 'assistant', text: "Generating" },
-        // ])
+    // // 1Add user message immediately
+    // setMessages(prev => [
+    //     ...prev,
+    //     { role: 'user', text: userMessage },
+    //     { role: 'assistant', text: "Generating" },
+    // ])
 
-        // const response = await runAgent(userMessage, sessionIdRef.current ?? 'default')
+    // const response = await runAgent(userMessage, sessionIdRef.current ?? 'default')
 
-        // setMessages(prev => {
-        //     const updated = [...prev]
-        //     const lastIndex = updated.length - 1
+    // setMessages(prev => {
+    //     const updated = [...prev]
+    //     const lastIndex = updated.length - 1
 
-        //     if (updated[lastIndex]?.role === 'assistant') {
-        //         updated[lastIndex] = {
-        //             role: 'assistant',
-        //             text: response.response,
-        //         }
-        //     }
+    //     if (updated[lastIndex]?.role === 'assistant') {
+    //         updated[lastIndex] = {
+    //             role: 'assistant',
+    //             text: response.response,
+    //         }
+    //     }
 
-        //     return updated
-        // })
+    //     return updated
+    // })
 
-        // if (response.redirectPath) {
-        //     router.push(response.redirectPath)
-        // }
+    // if (response.redirectPath) {
+    //     router.push(response.redirectPath)
+    // }
 
-        {/* STREAM METHOD */ }
-        const userMessage = input.trim()
+    {/* STREAM METHOD */ }
 
-        if (!userMessage) return
-        setInput('')
+    const transport = useMemo(() => {
+        return new FetchStreamTransport({
+            apiUrl: "/api/ai",
+            onRequest: async (url: string, init: RequestInit) => {
+                const customBody = JSON.stringify({
+                    ...(JSON.parse(init.body as string) || {})
+                });
 
-        // 1Add user message immediately
-        setMessages(prev => [
-            ...prev,
-            { role: 'user', text: userMessage },
-            { role: 'assistant', text: "Generating" },
-        ])
+                return {
+                    ...init,
+                    body: customBody,
+                };
+            },
+        });
+    }, []);
 
-        // 2️⃣ Call the route
-        const response = await fetch("/api/ollama", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ inputMessage: userMessage }),
-        })
+    const stream = useStream({
+        transport,
+    });
 
-        if (!response.body) return
+    const toolCallsByMessage = useMemo(() => {
+        const map = new Map<Message, ToolCallState[]>();
 
-        // 3️⃣ Stream the response
-        const reader = response.body
-            .pipeThrough(new TextDecoderStream())
-            .getReader()
+        stream.messages.forEach((message) => {
+            // Only process AI messages (check both SDK format and LangChain Core format)
+            if (!isAIMessage(message)) {
+                return
+            };
 
-        let accumulatedText = ""
+            const aiMessage = message as AIMessage;
 
-        while (true) {
-            const { value, done } = await reader.read()
-            if (done) break
-            accumulatedText += value ?? ""
+            // Extract tool calls from AIMessage - check both direct property and kwargs
+            let toolCalls: ToolCall[] = [];
 
-            // 4️⃣ Update only the LAST assistant message
-            setMessages(prev => {
-                const updated = [...prev]
-                const lastIndex = updated.length - 1
+            // Check for tool_calls directly on message (SDK format)
+            if (aiMessage.tool_calls && Array.isArray(aiMessage.tool_calls)) {
+                toolCalls = aiMessage.tool_calls as ToolCall[];
+            }
 
-                if (updated[lastIndex]?.role === 'assistant') {
-                    updated[lastIndex] = {
-                        role: 'assistant',
-                        text: accumulatedText,
+            // Extract tool messages (responses) - find ToolMessage type messages
+            const toolMessages: ToolMessage[] = [];
+            for (const msg of stream.messages) {
+                if (isToolMessage(msg)) {
+                    const toolMessage = msg as ToolMessage;
+                    const toolCallId = toolMessage.tool_call_id;
+
+                    if (toolCallId && toolCalls.some((tc) => tc.id === toolCallId)) {
+                        toolMessages.push(msg as ToolMessage);
                     }
                 }
+            }
 
-                return updated
-            })
-        }
+            // Build tool call states
+            if (toolCalls.length > 0) {
+                const toolCallStates: ToolCallState[] = [];
+                for (const toolCall of toolCalls) {
+                    const toolMessage = toolMessages.find((tm) => {
+                        return tm.tool_call_id === toolCall.id;
+                    });
 
-    }
+                    toolCallStates.push({
+                        toolCall,
+                        toolMessage,
+                    });
+                }
+                map.set(message, toolCallStates);
+            }
+        });
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-        void sendMessage()
-    }
+        return map;
+    }, [stream.messages]);
 
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault()
-            void sendMessage()
-        }
-    }
+    const handleSend = useCallback(
+        (message: string) => {
+            if (!message.trim() || stream.isLoading) return;
+
+            stream.submit({
+                messages: [{ content: message, type: "human" }],
+            });
+        },
+        [stream]
+    );
+
+
+    const handleInputSubmit = useCallback(
+        (message: string) => {
+            handleSend(message);
+        },
+        [handleSend]
+    );
+
+    // const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    //     if (event.key === 'Enter' && !event.shiftKey) {
+    //         event.preventDefault()
+    //         void sendMessage()
+    //     }
+    // }
+
+
 
     return (
         <div className="fixed bottom-6 right-6 z-50">
@@ -140,23 +182,29 @@ export default function AiChatBubble() {
                             <div className="flex h-full flex-col justify-end gap-3">
                                 <div className="flex flex-col gap-3">
                                     <AiChatMessage text="Hello! Feel free to ask anything about João." />
-                                    {messages.map((message, index) =>
-                                        message.role === 'user' ? (
-                                            <UserChatMessage key={index} text={message.text} />
-                                        ) : (
-                                            <AiChatMessage key={index} text={message.text} />
-                                        )
-                                    )}
+                                    {stream.messages
+                                        .filter((m) => !isToolMessage(m))
+                                        .map((message, index) => (
+                                            isHumanMessage(message) ? (
+                                                <UserChatMessage key={index} text={extractTextContent(message.content)} />
+                                            ) : (
+                                                <AiChatMessage key={index} text={extractTextContent(message.content)} />
+                                            )
+                                        ))}
                                 </div>
 
-                                <form onSubmit={handleSubmit} className="flex items-end gap-2 rounded-lg border bg-white/5 p-2">
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleInputSubmit(input);
+                                        setInput("");
+                                    }}
+                                    className="flex items-end gap-2 rounded-lg border bg-white/5 p-2"
+                                >
                                     <textarea
-                                        name="message"
-                                        id="message"
-                                        placeholder="Ask me anything about João"
                                         value={input}
-                                        onChange={event => setInput(event.target.value)}
-                                        onKeyDown={handleKeyDown}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        placeholder="Ask me anything about João"
                                         className="w-full resize-none bg-transparent outline-none"
                                         rows={2}
                                     />
@@ -196,4 +244,5 @@ export default function AiChatBubble() {
             </div>
         </div >
     )
+
 }

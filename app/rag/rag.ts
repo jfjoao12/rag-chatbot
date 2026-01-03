@@ -41,6 +41,7 @@ export const llm = new ChatGoogleGenerativeAI({
     model: "gemini-3-flash-preview",
     temperature: 0,
     maxRetries: 2,
+    streaming: true,
     apiKey: process.env.GOOGLE_API_KEY!
 });
 
