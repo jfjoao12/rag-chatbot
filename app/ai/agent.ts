@@ -5,7 +5,7 @@ import { llm } from "../rag/rag";
 import { getTools } from "./tools";
 import { AIMessage, ToolMessage } from "langchain";
 import { MemorySaver } from "@langchain/langgraph";
-import { prompts, contraints } from "./prompts";
+import { prompts } from "./prompts";
 
 type AgentResponse = {
     tools: string[],
@@ -28,7 +28,6 @@ export default async function runAgent(
     const systemPrompt = new SystemMessage(
         `
             ${prompts.house}\n
-            ${contraints.default}
         `
     )
 
