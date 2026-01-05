@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageCircleIcon, X, SendHorizonalIcon, SendIcon } from 'lucide-react'
 import UserChatMessage from './UserChatMessage'
 import AiChatMessage from './AiChatMessage'
@@ -17,12 +17,26 @@ type ChatMessage = {
     text: string
 }
 
+function getPageContext() {
+    return {
+        url: window.location.href,
+        path: window.location.pathname,
+        title: document.title,
+        // simplistic scraping of main content to save tokens
+        contentSummary: document.body.innerText.substring(0, 5000).replace(/\s+/g, ' ')
+    };
+}
+
 export default function AiChatBubble() {
     const router = useRouter()
     const sessionIdRef = useRef<string | null>(null)
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [input, setInput] = useState('')
+    const [redirect, setRedirect] = useState('')
 
+    const redirectPage = (path: string) => {
+        router.push(path)
+    }
 
     if (!sessionIdRef.current) {
         sessionIdRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -59,10 +73,6 @@ export default function AiChatBubble() {
 
     //     return updated
     // })
-
-    // if (response.redirectPath) {
-    //     router.push(response.redirectPath)
-    // }
 
     {/* STREAM METHOD */ }
 
@@ -138,6 +148,7 @@ export default function AiChatBubble() {
         return map;
     }, [stream.messages]);
 
+
     const handleSend = useCallback(
         (message: string) => {
             if (!message.trim() || stream.isLoading) return;
@@ -157,14 +168,14 @@ export default function AiChatBubble() {
         [handleSend]
     );
 
+
+
     // const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     //     if (event.key === 'Enter' && !event.shiftKey) {
     //         event.preventDefault()
     //         void sendMessage()
     //     }
     // }
-
-
 
     return (
         <div className="fixed bottom-6 right-6 z-50">
@@ -183,12 +194,14 @@ export default function AiChatBubble() {
                                 <div className="flex flex-col gap-3">
                                     <AiChatMessage text="Hello! Feel free to ask anything about João." />
                                     {stream.messages
-                                        .filter((m) => !isToolMessage(m))
+                                        .filter((m) => !isToolMessage(m) && m.content !== "")
                                         .map((message, index) => (
                                             isHumanMessage(message) ? (
                                                 <UserChatMessage key={index} text={extractTextContent(message.content)} />
                                             ) : (
-                                                <AiChatMessage key={index} text={extractTextContent(message.content)} />
+                                                <div key={index} className="flex flex-col gap-1">
+                                                    <AiChatMessage text={extractTextContent(message.content)} />
+                                                </div>
                                             )
                                         ))}
                                 </div>

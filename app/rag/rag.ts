@@ -33,8 +33,9 @@ export const embeddings = new GoogleGenerativeAIEmbeddings({
 // 3. Setup Ollama LLM (for generating answers)
 // export const llm = new ChatOllama({
 //     baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
-//     model: process.env.OLLAMA_CHAT_MODEL ?? "gpt-oss:20b",
+//     model: process.env.OLLAMA_CHAT_MODEL ?? "qwen3:8b-largercontext",
 //     temperature: 0.2,
+//     think: false
 // })
 
 export const llm = new ChatGoogleGenerativeAI({
