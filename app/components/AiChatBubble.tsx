@@ -1,81 +1,40 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageCircleIcon, X, SendHorizonalIcon, SendIcon } from 'lucide-react'
+import { MessageCircleIcon, X, SendHorizonalIcon } from 'lucide-react'
 import UserChatMessage from './UserChatMessage'
 import AiChatMessage from './AiChatMessage'
 import { useStream, FetchStreamTransport } from "@langchain/langgraph-sdk/react";
 import { useRouter } from 'next/navigation'
 import { AIMessage, Message, ToolMessage } from '@langchain/core/messages'
-import { ToolCallBubble, type ToolCallState } from "./ToolCall";
-
+import { type ToolCallState } from "./ToolCall";
+import * as z from "zod";
 import { isAIMessage, isToolMessage, isHumanMessage, extractTextContent } from "../utils/ai_utils";
 import { ToolCall } from 'langchain'
-
-type ChatMessage = {
-    role: 'user' | 'assistant'
-    text: string
-}
-
-function getPageContext() {
-    return {
-        url: window.location.href,
-        path: window.location.pathname,
-        title: document.title,
-        // simplistic scraping of main content to save tokens
-        contentSummary: document.body.innerText.substring(0, 5000).replace(/\s+/g, ' ')
-    };
-}
+import { customEventSchema } from '../ai/tools/tools_utils'
 
 export default function AiChatBubble() {
     const router = useRouter()
     const sessionIdRef = useRef<string | null>(null)
+    const processedToolIds = useRef<Set<string>>(new Set());
+
+    // UI State
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [input, setInput] = useState('')
-    const [redirect, setRedirect] = useState('')
 
-    const redirectPage = (path: string) => {
-        router.push(path)
-    }
+    // Custom Events State
+    const [customEvents, setCustomEvents] = useState<z.infer<typeof customEventSchema>[]>([]);
+    const [messageEvents, setMessageEvent] = useState<z.infer<typeof customEventSchema>[]>([]);
 
+
+    // Generate session ID once
     if (!sessionIdRef.current) {
         sessionIdRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
             ? crypto.randomUUID()
             : Math.random().toString(36).slice(2)
     }
 
-    const toggleChat = () => setIsChatOpen(open => !open)
-
-
-    // const userMessage = input.trim()
-    // if (!userMessage) return
-    // setInput('')
-
-    // // 1Add user message immediately
-    // setMessages(prev => [
-    //     ...prev,
-    //     { role: 'user', text: userMessage },
-    //     { role: 'assistant', text: "Generating" },
-    // ])
-
-    // const response = await runAgent(userMessage, sessionIdRef.current ?? 'default')
-
-    // setMessages(prev => {
-    //     const updated = [...prev]
-    //     const lastIndex = updated.length - 1
-
-    //     if (updated[lastIndex]?.role === 'assistant') {
-    //         updated[lastIndex] = {
-    //             role: 'assistant',
-    //             text: response.response,
-    //         }
-    //     }
-
-    //     return updated
-    // })
-
-    {/* STREAM METHOD */ }
-
+    // Stream Transport Setup
     const transport = useMemo(() => {
         return new FetchStreamTransport({
             apiUrl: "/api/ai",
@@ -83,7 +42,6 @@ export default function AiChatBubble() {
                 const customBody = JSON.stringify({
                     ...(JSON.parse(init.body as string) || {})
                 });
-
                 return {
                     ...init,
                     body: customBody,
@@ -92,30 +50,66 @@ export default function AiChatBubble() {
         });
     }, []);
 
+    // Stream with Custom Event Handler
     const stream = useStream({
         transport,
+        onCustomEvent: (event, options) => {
+            console.log("EVENT:", event);
+            console.log("OPTIONS:", options);
+            const payload = typeof event === "string" ? { message: event } : event;
+            const parsed = customEventSchema.safeParse(payload);
+
+
+
+            if (!parsed.success) {
+                setCustomEvents((prev) => [...prev, { message: JSON.stringify(payload) }]);
+                return;
+            }
+            setMessageEvent([parsed.data]);
+            setCustomEvents((prev) => [...prev, parsed.data]);
+        },
     });
 
+
+    // Handle redirect tool calls
+    useEffect(() => {
+        stream.messages.forEach((message) => {
+            const toolMessage = message as ToolMessage
+
+            if (processedToolIds.current.has(toolMessage.tool_call_id)) {
+                return
+            }
+
+            try {
+                const content = typeof toolMessage.content === 'string'
+                    ? JSON.parse(toolMessage.content)
+                    : toolMessage.content
+
+                if (content?.type === "redirect" && content?.path) {
+                    processedToolIds.current.add(toolMessage.tool_call_id)
+                    router.push(content.path);
+                }
+            } catch (error) {
+                // Silently handle non-JSON content
+            }
+        })
+    }, [stream.messages, router])
+
+    // Map tool calls to their respective AI messages
     const toolCallsByMessage = useMemo(() => {
         const map = new Map<Message, ToolCallState[]>();
 
         stream.messages.forEach((message) => {
-            // Only process AI messages (check both SDK format and LangChain Core format)
-            if (!isAIMessage(message)) {
-                return
-            };
+            if (!isAIMessage(message)) return;
 
             const aiMessage = message as AIMessage;
-
-            // Extract tool calls from AIMessage - check both direct property and kwargs
             let toolCalls: ToolCall[] = [];
 
-            // Check for tool_calls directly on message (SDK format)
             if (aiMessage.tool_calls && Array.isArray(aiMessage.tool_calls)) {
                 toolCalls = aiMessage.tool_calls as ToolCall[];
             }
 
-            // Extract tool messages (responses) - find ToolMessage type messages
+            // Find corresponding tool messages
             const toolMessages: ToolMessage[] = [];
             for (const msg of stream.messages) {
                 if (isToolMessage(msg)) {
@@ -130,36 +124,32 @@ export default function AiChatBubble() {
 
             // Build tool call states
             if (toolCalls.length > 0) {
-                const toolCallStates: ToolCallState[] = [];
-                for (const toolCall of toolCalls) {
-                    const toolMessage = toolMessages.find((tm) => {
-                        return tm.tool_call_id === toolCall.id;
-                    });
-
-                    toolCallStates.push({
-                        toolCall,
-                        toolMessage,
-                    });
-                }
+                const toolCallStates: ToolCallState[] = toolCalls.map(toolCall => ({
+                    toolCall,
+                    toolMessage: toolMessages.find(tm => tm.tool_call_id === toolCall.id),
+                }));
                 map.set(message, toolCallStates);
             }
         });
-
         return map;
     }, [stream.messages]);
 
+    // Filter out tool messages from display
+    const filteredMessages = useMemo(
+        () => stream.messages.filter((m) => !isToolMessage(m)),
+        [stream.messages]
+    );
 
+    // Message handlers
     const handleSend = useCallback(
         (message: string) => {
             if (!message.trim() || stream.isLoading) return;
-
             stream.submit({
                 messages: [{ content: message, type: "human" }],
             });
         },
         [stream]
     );
-
 
     const handleInputSubmit = useCallback(
         (message: string) => {
@@ -168,44 +158,77 @@ export default function AiChatBubble() {
         [handleSend]
     );
 
-
-
-    // const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    //     if (event.key === 'Enter' && !event.shiftKey) {
-    //         event.preventDefault()
-    //         void sendMessage()
-    //     }
-    // }
+    const toggleChat = () => setIsChatOpen(open => !open)
 
     return (
         <div className="fixed bottom-6 right-6 z-50">
+            {/* Chat Window */}
             {isChatOpen && (
                 <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
+                    {/* Backdrop */}
                     <div className="absolute inset-0 bg-black/40" onClick={toggleChat} />
-                    <div className="absolute right-6 bottom-20 top-6 w-96 max-w-full rounded-2xl bg-white/5 backdrop-blur-[2px] flex flex-col">
+
+                    {/* Chat Container */}
+                    <div className="absolute right-6 bottom-20 top-6 w-[20%] rounded-2xl bg-white/5 backdrop-blur-[2px] flex flex-col">
+                        {/* Header */}
                         <div className="flex items-center justify-between border-b px-4 py-3">
                             <span className="text-sm font-medium">AI Chat</span>
-                            <button type="button" onClick={toggleChat} className="p-1">
+                            <button type="button" onClick={toggleChat} className="p-1 hover:opacity-70">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
+
+                        {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-4">
                             <div className="flex h-full flex-col justify-end gap-3">
-                                <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-3 ">
+                                    {/* Initial greeting */}
                                     <AiChatMessage text="Hello! Feel free to ask anything about João." />
-                                    {stream.messages
-                                        .filter((m) => !isToolMessage(m) && m.content !== "")
-                                        .map((message, index) => (
-                                            isHumanMessage(message) ? (
-                                                <UserChatMessage key={index} text={extractTextContent(message.content)} />
-                                            ) : (
+
+                                    {/* Message list */}
+                                    {filteredMessages.map((message, index) => {
+                                        // User messages
+                                        if (isHumanMessage(message)) {
+                                            return (
+                                                <UserChatMessage
+                                                    key={index}
+                                                    text={extractTextContent(message.content)}
+                                                />
+                                            )
+                                        }
+
+                                        // AI messages
+                                        if (isAIMessage(message)) {
+                                            const text = extractTextContent(message.content)
+                                            const toolCallStates = toolCallsByMessage.get(message)
+                                            const hasToolCalls = toolCallStates && toolCallStates.length > 0
+
+                                            return (
                                                 <div key={index} className="flex flex-col gap-1">
-                                                    <AiChatMessage text={extractTextContent(message.content)} />
+                                                    {/* Tool status messages */}
+                                                    {hasToolCalls && (
+                                                        <div className="space-y-1">
+                                                            {messageEvents.map((evt, evtIndex) => (
+                                                                <div
+                                                                    className="text-xs italic text-muted-foreground bg-white/5 px-2 py-1 rounded"
+                                                                    key={evtIndex}
+                                                                >
+                                                                    {evt.type && <span className="font-semibold">[{evt.type}]</span>} {evt.message ?? JSON.stringify(evt)}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* AI response */}
+                                                    {text && <AiChatMessage key={index} text={text} />}
                                                 </div>
                                             )
-                                        ))}
+                                        }
+                                        return null
+                                    })}
                                 </div>
 
+                                {/* Input Form */}
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
@@ -217,45 +240,43 @@ export default function AiChatBubble() {
                                     <textarea
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleInputSubmit(input);
+                                                setInput("");
+                                            }
+                                        }}
                                         placeholder="Ask me anything about João"
                                         className="w-full resize-none bg-transparent outline-none"
                                         rows={2}
+                                        disabled={stream.isLoading}
                                     />
                                     <button
                                         type="submit"
-                                        className="flex h-10 w-10 items-center justify-center rounded-full border-2"
+                                        className="flex h-10 w-10 items-center justify-center rounded-full border-2 hover:bg-white/10 disabled:opacity-50"
                                         aria-label="Send message"
+                                        disabled={stream.isLoading || !input.trim()}
                                     >
                                         <SendHorizonalIcon />
                                     </button>
                                 </form>
-                                <div
-
-                                    className="flex h-10 w-10 items-center justify-center rounded-full border-2"
-                                    aria-label="Send message"
-                                    onClick={() => router.push("/test")}
-                                >
-                                    <SendIcon />
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
-            <div
-                role="button"
-                tabIndex={0}
+            {/* Toggle Button */}
+            <button
+                type="button"
                 aria-label="Open AI chat"
                 aria-expanded={isChatOpen}
                 onClick={toggleChat}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleChat()}
                 className="flex h-12 w-12 items-center justify-center rounded-full border-2 bg-white shadow-lg transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
                 <MessageCircleIcon />
-            </div>
-        </div >
+            </button>
+        </div>
     )
-
 }

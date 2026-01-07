@@ -31,20 +31,23 @@ export const embeddings = new GoogleGenerativeAIEmbeddings({
 })
 
 // 3. Setup Ollama LLM (for generating answers)
-// export const llm = new ChatOllama({
-//     baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
-//     model: process.env.OLLAMA_CHAT_MODEL ?? "qwen3:8b-largercontext",
-//     temperature: 0.2,
-//     think: false
-// })
-
-export const llm = new ChatGoogleGenerativeAI({
-    model: "gemini-3-flash-preview",
+export const llm = new ChatOllama({
+    baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
+    model: process.env.OLLAMA_CHAT_MODEL ?? "ministral-3:14b",
     temperature: 0,
+    think: false,
+    numCtx: 6148,
+    numGpu: 999,
     maxRetries: 2,
-    streaming: true,
-    apiKey: process.env.GOOGLE_API_KEY!
-});
+})
+
+// export const llm = new ChatGoogleGenerativeAI({
+//     model: "gemini-3-flash-preview",
+//     temperature: 0,
+//     maxRetries: 2,
+//     streaming: true,
+//     apiKey: process.env.GOOGLE_API_KEY!
+// });
 
 // export const toolAwareLLM = llm.bindTools([
 //     getCurrentTime,

@@ -2,7 +2,7 @@
 
 import { BaseMessage, createAgent, SystemMessage, AIMessage } from "langchain"
 import { llm } from "../rag/rag";
-import { getTools } from "./tools";
+import { getTools } from "./tools/tools";
 import { LangGraphRunnableConfig, MemorySaver } from "@langchain/langgraph";
 import { prompts } from "./prompts";
 
@@ -38,7 +38,7 @@ export async function runAgent(options: { input: Record<string, unknown>; config
         messages: BaseMessage[];
     }, {
         encoding: "text/event-stream",
-        streamMode: ["values", "updates", "messages"],
+        streamMode: ["custom", "values", "updates", "messages"],
         configurable: options.config.configurable,
         recursionLimit: 10,
     });

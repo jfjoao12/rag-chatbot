@@ -3,12 +3,9 @@
 import { vectorStore } from "@/app/rag/rag";
 import { tool } from "@langchain/core/tools";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { redirect } from "next/navigation";
-import { queryObjects } from "v8";
 import * as z from "zod";
 
 const retrieveSchema = z.object({ query: z.string() });
-
 export async function getTools(): Promise<any[]> {
     return [
         tool(
@@ -27,7 +24,17 @@ export async function getTools(): Promise<any[]> {
             }
         ),
         tool(
-            async ({ query }) => {
+            async ({ query }, config?: LangGraphRunnableConfig) => {
+                const extendedConfig = config as any;
+
+                config?.writer?.({
+                    type: "toolMessageUpdate",
+                    message: "Fetching documents",
+                    toolCallId: extendedConfig.toolCallId, // Force it with 'as any'
+                });
+
+                console.log("TOOL CALL ID?: ", extendedConfig.toolCallId)
+
                 const retrievedDocs = await vectorStore.similaritySearch(query);
                 const serialized = retrievedDocs
                     .map(
@@ -45,9 +52,17 @@ export async function getTools(): Promise<any[]> {
             }
         ),
         tool(
-            async (config: LangGraphRunnableConfig) => {
-                config.writer?.("Checking local time")
-                return new Date().toISOString();
+            async (_input, config?: LangGraphRunnableConfig) => {
+
+                const extendedConfig = config as any;
+                config?.writer?.({
+                    type: "toolMessageUpdate",
+                    message: "Fetching time",
+                    toolCallId: extendedConfig.toolCallId, // Force it with 'as any'
+                });
+
+                console.log("TOOL CALL ID?: ", extendedConfig.toolCallId)
+                return new Date().toLocaleString();
             },
             {
                 name: "getCurrentTime",

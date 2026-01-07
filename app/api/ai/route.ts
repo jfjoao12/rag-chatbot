@@ -2,9 +2,6 @@ import { MemorySaver } from "@langchain/langgraph";
 import { NextRequest } from "next/server";
 import { runAgent } from "@/app/ai/agent";
 
-const checkpointer = new MemorySaver();
-
-
 export async function POST(request: NextRequest) {
     try {
         // Parse request body
