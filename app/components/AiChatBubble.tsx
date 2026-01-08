@@ -23,8 +23,9 @@ export default function AiChatBubble() {
     const [input, setInput] = useState('')
 
     // Custom Events State
-    const [customEvents, setCustomEvents] = useState<z.infer<typeof customEventSchema>[]>([]);
-    const [messageEvents, setMessageEvent] = useState<z.infer<typeof customEventSchema>[]>([]);
+    const [toolEventsByCallId, setToolEventsByCallId] = useState<
+        Record<string, z.infer<typeof customEventSchema>[]>
+    >({});
 
 
     // Generate session ID once
@@ -56,17 +57,27 @@ export default function AiChatBubble() {
         onCustomEvent: (event, options) => {
             console.log("EVENT:", event);
             console.log("OPTIONS:", options);
+
             const payload = typeof event === "string" ? { message: event } : event;
             const parsed = customEventSchema.safeParse(payload);
 
 
 
             if (!parsed.success) {
-                setCustomEvents((prev) => [...prev, { message: JSON.stringify(payload) }]);
                 return;
             }
-            setMessageEvent([parsed.data]);
-            setCustomEvents((prev) => [...prev, parsed.data]);
+
+            const toolCallId = typeof parsed.data?.data === "object" && parsed.data.data
+                ? (parsed.data.data as Record<string, unknown>).tool_call_id
+                ?? (parsed.data.data as Record<string, unknown>).toolCallId
+                : undefined;
+
+            if (typeof toolCallId === "string") {
+                setToolEventsByCallId((prev) => ({
+                    ...prev,
+                    [toolCallId]: [...(prev[toolCallId] ?? []), parsed.data],
+                }));
+            }
         },
     });
 
@@ -133,6 +144,7 @@ export default function AiChatBubble() {
         });
         return map;
     }, [stream.messages]);
+
 
     // Filter out tool messages from display
     const filteredMessages = useMemo(
@@ -202,28 +214,50 @@ export default function AiChatBubble() {
                                             const text = extractTextContent(message.content)
                                             const toolCallStates = toolCallsByMessage.get(message)
                                             const hasToolCalls = toolCallStates && toolCallStates.length > 0
-
+                                            console.log("AAAAAAAAAAAAA", JSON.stringify(toolEventsByCallId, null, 2))
                                             return (
                                                 <div key={index} className="flex flex-col gap-1">
                                                     {/* Tool status messages */}
                                                     {hasToolCalls && (
                                                         <div className="space-y-1">
-                                                            {messageEvents.map((evt, evtIndex) => (
-                                                                <div
-                                                                    className="text-xs italic text-muted-foreground bg-white/5 px-2 py-1 rounded"
-                                                                    key={evtIndex}
-                                                                >
-                                                                    {evt.type && <span className="font-semibold">[{evt.type}]</span>} {evt.message ?? JSON.stringify(evt)}
-                                                                </div>
-                                                            ))}
+                                                            {toolCallStates?.map((toolCallState) => {
+                                                                const toolCallId = toolCallState.toolCall.id
+                                                                const toolEvents = toolCallId
+                                                                    ? toolEventsByCallId[toolCallId] ?? []
+                                                                    : []
+
+                                                                return (
+                                                                    <div key={toolCallId ?? toolCallState.toolCall.name} className="space-y-1">
+                                                                        <div className="text-xs italic text-muted-foreground bg-white/5 px-2 py-1 rounded">
+                                                                            <span className="font-semibold">[{toolCallState.toolCall.name}]</span>
+                                                                        </div>
+                                                                        {toolEvents.map((evt, evtIndex) => (
+                                                                            <div
+                                                                                className="text-xs italic text-muted-foreground bg-white/5 px-2 py-1 rounded"
+                                                                                key={evtIndex}
+                                                                            >
+                                                                                {evt.type && <span className="font-semibold">[{evt.type}]</span>} {evt.message ?? JSON.stringify(evt)}
+                                                                            </div>
+                                                                        ))}
+                                                                        {process.env.NODE_ENV !== "production" && (
+                                                                            <pre className="mt-2 text-xs bg-white/5 p-2 rounded">
+                                                                                {JSON.stringify(toolEventsByCallId, null, 2)}
+                                                                            </pre>
+                                                                        )}
+                                                                    </div>
+
+                                                                )
+                                                            })}
                                                         </div>
                                                     )}
 
                                                     {/* AI response */}
                                                     {text && <AiChatMessage key={index} text={text} />}
+
                                                 </div>
                                             )
                                         }
+
                                         return null
                                     })}
                                 </div>
