@@ -1,38 +1,54 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageCircleIcon, X, SendHorizonalIcon } from 'lucide-react'
-import UserChatMessage from './UserChatMessage'
-import AiChatMessage from './AiChatMessage'
-import { useStream, FetchStreamTransport } from "@langchain/langgraph-sdk/react";
-import { useRouter } from 'next/navigation'
 import { AIMessage, Message, ToolMessage } from '@langchain/core/messages'
-import { type ToolCallState } from "./ToolCall";
-import * as z from "zod";
-import { isAIMessage, isToolMessage, isHumanMessage, extractTextContent } from "../utils/ai_utils";
+import { useStream, FetchStreamTransport } from '@langchain/langgraph-sdk/react'
 import { ToolCall } from 'langchain'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import * as z from 'zod'
+import AiChatMessage from './AiChatMessage'
+import { type ToolCallState } from './ToolCall'
+import UserChatMessage from './UserChatMessage'
 import { customEventSchema } from '../ai/tools/tools_utils'
+import { extractTextContent, isAIMessage, isHumanMessage, isToolMessage } from '../utils/ai_utils'
+
+type CustomEvent = z.infer<typeof customEventSchema>
+type CustomEventWithToolId = CustomEvent & { toolCallId?: string; tool_call_id?: string }
+
+const resolveToolCallId = (event: CustomEvent, fallbackId: string | null) => {
+    const eventWithToolId = event as CustomEventWithToolId
+    return eventWithToolId.toolCallId ?? eventWithToolId.tool_call_id ?? fallbackId ?? 'unknown'
+}
+
+function AiLiveFeedback({ messageEvents }: { messageEvents: CustomEvent[] }) {
+    return (
+        <div className="space-y-1">
+            {messageEvents.map((evt, evtIndex) => (
+                <div
+                    className="text-xs italic text-muted-foreground bg-white/5 px-2 py-1 rounded"
+                    key={evtIndex}
+                >
+                    {evt.type && <span className="font-semibold">[{evt.type}]</span>} {evt.message ?? JSON.stringify(evt)}
+                </div>
+            ))}
+        </div>
+    )
+}
+
 
 export default function AiChatBubble() {
     const router = useRouter()
-    const sessionIdRef = useRef<string | null>(null)
-    const processedToolIds = useRef<Set<string>>(new Set());
+    const processedToolIds = useRef<Set<string>>(new Set())
+    const activeToolCallIdRef = useRef<string | null>(null)
 
     // UI State
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [input, setInput] = useState('')
 
     // Custom Events State
-    const [customEvents, setCustomEvents] = useState<z.infer<typeof customEventSchema>[]>([]);
-    const [messageEvents, setMessageEvent] = useState<z.infer<typeof customEventSchema>[]>([]);
-
-
-    // Generate session ID once
-    if (!sessionIdRef.current) {
-        sessionIdRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-            ? crypto.randomUUID()
-            : Math.random().toString(36).slice(2)
-    }
+    const [eventsByToolCallId, setEventsByToolCallId] =
+        useState<Record<string, CustomEvent[]>>({})
 
     // Stream Transport Setup
     const transport = useMemo(() => {
@@ -53,32 +69,45 @@ export default function AiChatBubble() {
     // Stream with Custom Event Handler
     const stream = useStream({
         transport,
-        onCustomEvent: (event, options) => {
-            console.log("EVENT:", event);
-            console.log("OPTIONS:", options);
+        onCustomEvent: (event) => {
             const payload = typeof event === "string" ? { message: event } : event;
             const parsed = customEventSchema.safeParse(payload);
 
+            if (!parsed.success) return;
 
+            const evt = parsed.data;
+            const toolCallId = resolveToolCallId(evt, activeToolCallIdRef.current);
 
-            if (!parsed.success) {
-                setCustomEvents((prev) => [...prev, { message: JSON.stringify(payload) }]);
-                return;
-            }
-            setMessageEvent([parsed.data]);
-            setCustomEvents((prev) => [...prev, parsed.data]);
-        },
+            setEventsByToolCallId(prev => ({
+                ...prev,
+                [toolCallId]: [...(prev[toolCallId] ?? []), evt],
+            }));
+        }
     });
 
+    useEffect(() => {
+        // find the newest AI message with tool calls and remember the last tool call id
+        for (let i = stream.messages.length - 1; i >= 0; i--) {
+            const msg = stream.messages[i];
+            if (isAIMessage(msg)) {
+                const ai = msg as AIMessage;
+                const lastToolCall = ai.tool_calls?.[ai.tool_calls.length - 1] as any;
+                if (lastToolCall?.id) {
+                    activeToolCallIdRef.current = lastToolCall.id;
+                }
+                break;
+            }
+        }
+    }, [stream.messages]);
 
     // Handle redirect tool calls
     useEffect(() => {
-        stream.messages.forEach((message) => {
+        for (const message of stream.messages) {
+            if (!isToolMessage(message)) continue
             const toolMessage = message as ToolMessage
+            const toolCallId = toolMessage.tool_call_id
 
-            if (processedToolIds.current.has(toolMessage.tool_call_id)) {
-                return
-            }
+            if (!toolCallId || processedToolIds.current.has(toolCallId)) continue
 
             try {
                 const content = typeof toolMessage.content === 'string'
@@ -86,21 +115,33 @@ export default function AiChatBubble() {
                     : toolMessage.content
 
                 if (content?.type === "redirect" && content?.path) {
-                    processedToolIds.current.add(toolMessage.tool_call_id)
-                    router.push(content.path);
+                    processedToolIds.current.add(toolCallId)
+                    router.push(content.path)
                 }
             } catch (error) {
                 // Silently handle non-JSON content
             }
-        })
+        }
     }, [stream.messages, router])
 
     // Map tool calls to their respective AI messages
+    // Nao to conseguindo usar essa porra tbm
     const toolCallsByMessage = useMemo(() => {
-        const map = new Map<Message, ToolCallState[]>();
+        const toolMessagesById = new Map<string, ToolMessage>()
+
+        for (const message of stream.messages) {
+            if (!isToolMessage(message)) continue
+            const toolMessage = message as ToolMessage
+            const toolCallId = toolMessage.tool_call_id
+
+            if (!toolCallId || toolMessagesById.has(toolCallId)) continue
+            toolMessagesById.set(toolCallId, toolMessage)
+        }
+
+        const map = new Map<Message, ToolCallState[]>()
 
         stream.messages.forEach((message) => {
-            if (!isAIMessage(message)) return;
+            if (!isAIMessage(message)) return
 
             const aiMessage = message as AIMessage;
             let toolCalls: ToolCall[] = [];
@@ -109,32 +150,20 @@ export default function AiChatBubble() {
                 toolCalls = aiMessage.tool_calls as ToolCall[];
             }
 
-            // Find corresponding tool messages
-            const toolMessages: ToolMessage[] = [];
-            for (const msg of stream.messages) {
-                if (isToolMessage(msg)) {
-                    const toolMessage = msg as ToolMessage;
-                    const toolCallId = toolMessage.tool_call_id;
-
-                    if (toolCallId && toolCalls.some((tc) => tc.id === toolCallId)) {
-                        toolMessages.push(msg as ToolMessage);
-                    }
-                }
-            }
-
             // Build tool call states
             if (toolCalls.length > 0) {
                 const toolCallStates: ToolCallState[] = toolCalls.map(toolCall => ({
                     toolCall,
-                    toolMessage: toolMessages.find(tm => tm.tool_call_id === toolCall.id),
-                }));
-                map.set(message, toolCallStates);
+                    toolMessage: toolCall.id ? toolMessagesById.get(toolCall.id) : undefined,
+                }))
+                map.set(message, toolCallStates)
             }
-        });
-        return map;
+        })
+        return map
     }, [stream.messages]);
 
     // Filter out tool messages from display
+    // Nem isso
     const filteredMessages = useMemo(
         () => stream.messages.filter((m) => !isToolMessage(m)),
         [stream.messages]
@@ -151,12 +180,10 @@ export default function AiChatBubble() {
         [stream]
     );
 
-    const handleInputSubmit = useCallback(
-        (message: string) => {
-            handleSend(message);
-        },
-        [handleSend]
-    );
+    const submitInput = useCallback(() => {
+        handleSend(input)
+        setInput('')
+    }, [handleSend, input])
 
     const toggleChat = () => setIsChatOpen(open => !open)
 
@@ -169,7 +196,7 @@ export default function AiChatBubble() {
                     <div className="absolute inset-0 bg-black/40" onClick={toggleChat} />
 
                     {/* Chat Container */}
-                    <div className="absolute right-6 bottom-20 top-6 w-[20%] rounded-2xl bg-white/5 backdrop-blur-[2px] flex flex-col">
+                    <div className="absolute right-6 bottom-20 top-6 w-md rounded-2xl bg-white/5 backdrop-blur-[2px] flex flex-col">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b px-4 py-3">
                             <span className="text-sm font-medium">AI Chat</span>
@@ -200,29 +227,20 @@ export default function AiChatBubble() {
                                         // AI messages
                                         if (isAIMessage(message)) {
                                             const text = extractTextContent(message.content)
-                                            const toolCallStates = toolCallsByMessage.get(message)
-                                            const hasToolCalls = toolCallStates && toolCallStates.length > 0
+                                            const toolCallStates = toolCallsByMessage.get(message);
+                                            const hasToolCalls = toolCallStates && toolCallStates.length > 0;
+
+                                            const eventsForThisAiMessage =
+                                                toolCallStates?.flatMap(s => s.toolCall.id ? eventsByToolCallId[s.toolCall.id] ?? [] : []) ?? [];
 
                                             return (
-                                                <div key={index} className="flex flex-col gap-1">
-                                                    {/* Tool status messages */}
-                                                    {hasToolCalls && (
-                                                        <div className="space-y-1">
-                                                            {messageEvents.map((evt, evtIndex) => (
-                                                                <div
-                                                                    className="text-xs italic text-muted-foreground bg-white/5 px-2 py-1 rounded"
-                                                                    key={evtIndex}
-                                                                >
-                                                                    {evt.type && <span className="font-semibold">[{evt.type}]</span>} {evt.message ?? JSON.stringify(evt)}
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                <div key={(message as any).id ?? index} className="flex flex-col gap-1">
+                                                    {hasToolCalls && eventsForThisAiMessage.length > 0 && (
+                                                        <AiLiveFeedback messageEvents={eventsForThisAiMessage} />
                                                     )}
-
-                                                    {/* AI response */}
-                                                    {text && <AiChatMessage key={index} text={text} />}
+                                                    {text && <AiChatMessage text={text} />}
                                                 </div>
-                                            )
+                                            );
                                         }
                                         return null
                                     })}
@@ -232,8 +250,7 @@ export default function AiChatBubble() {
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
-                                        handleInputSubmit(input);
-                                        setInput("");
+                                        submitInput();
                                     }}
                                     className="flex items-end gap-2 rounded-lg border bg-white/5 p-2"
                                 >
@@ -243,8 +260,7 @@ export default function AiChatBubble() {
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter" && !e.shiftKey) {
                                                 e.preventDefault();
-                                                handleInputSubmit(input);
-                                                setInput("");
+                                                submitInput();
                                             }
                                         }}
                                         placeholder="Ask me anything about João"
