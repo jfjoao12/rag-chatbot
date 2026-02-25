@@ -10,7 +10,7 @@ import { Pool } from "pg"
 
 // 1. Setup The Postgres Pool
 export const pool = new Pool({
-    host: "localhost",
+    host: "127.0.0.1",
     port: 5432,
     user: process.env.POSTGRES_USER!,
     password: process.env.POSTGRES_PASSWORD!,
@@ -31,23 +31,23 @@ export const embeddings = new GoogleGenerativeAIEmbeddings({
 })
 
 // 3. Setup Ollama LLM (for generating answers)
-// export const llm = new ChatOllama({
-//     baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
-//     model: process.env.OLLAMA_CHAT_MODEL ?? "ministral-3:14b",
-//     temperature: 0,
-//     think: false,
-//     numCtx: 6148,
-//     numGpu: 999,
-//     maxRetries: 2,
-// })
-
-export const llm = new ChatGoogleGenerativeAI({
-    model: "gemini-3-flash-preview",
+export const llm = new ChatOllama({
+    baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
+    model: process.env.OLLAMA_CHAT_MODEL ?? "qwen3:30b-a3b",
     temperature: 0,
-    maxRetries: 2,
-    streaming: true,
-    apiKey: process.env.GOOGLE_API_KEY!
-});
+    numCtx: 16448,
+    // think: false,
+    // numGpu: 999,
+    // maxRetries: 2,
+})
+
+// export const llm = new ChatGoogleGenerativeAI({
+//     model: "gemini-3-flash-preview",
+//     temperature: 0,
+//     maxRetries: 2,
+//     streaming: true,
+//     apiKey: process.env.GOOGLE_API_KEY!
+// });
 
 // export const toolAwareLLM = llm.bindTools([
 //     getCurrentTime,

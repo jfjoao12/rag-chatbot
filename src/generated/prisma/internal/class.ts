@@ -17,18 +17,26 @@ import type * as Prisma from "./prismaNamespace.ts"
 
 const config: runtime.GetPrismaClientConfig = {
   "previewFeatures": [],
-  "clientVersion": "7.2.0",
-  "engineVersion": "0c8ef2ce45c83248ab3df073180d5eda9e8be7a3",
+  "clientVersion": "7.4.0",
+  "engineVersion": "ab56fe763f921d033a6c195e7ddeb3e255bdbb57",
   "activeProvider": "postgresql",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider               = \"prisma-client\"\n  output                 = \"../src/generated/prisma\"\n  generatedFileExtension = \"ts\" // Ensures files are generated as .ts\n  importFileExtension    = \"ts\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Document {\n  id        Int                         @id @default(autoincrement())\n  content   String\n  metadata  Json?\n  embedding Unsupported(\"vector(4096)\")\n  createdAt DateTime                    @default(now())\n\n  @@index([createdAt])\n  @@map(\"documents\")\n}\n",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider               = \"prisma-client\"\n  output                 = \"../src/generated/prisma\"\n  generatedFileExtension = \"ts\" // Ensures files are generated as .ts\n  importFileExtension    = \"ts\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Document {\n  id        Int                         @id @default(autoincrement())\n  content   String\n  metadata  Json?\n  embedding Unsupported(\"vector(3072)\")\n  createdAt DateTime                    @default(now())\n\n  @@index([createdAt])\n  @@map(\"documents\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
     "types": {}
+  },
+  "parameterizationSchema": {
+    "strings": [],
+    "graph": ""
   }
 }
 
 config.runtimeDataModel = JSON.parse("{\"models\":{\"Document\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"documents\"}},\"enums\":{},\"types\":{}}")
+config.parameterizationSchema = {
+  strings: JSON.parse("[\"where\",\"Document.findUnique\",\"Document.findUniqueOrThrow\",\"orderBy\",\"cursor\",\"Document.findFirst\",\"Document.findFirstOrThrow\",\"Document.findMany\",\"data\",\"Document.updateOne\",\"Document.updateMany\",\"Document.updateManyAndReturn\",\"Document.deleteOne\",\"Document.deleteMany\",\"having\",\"_count\",\"_avg\",\"_sum\",\"_min\",\"_max\",\"Document.groupBy\",\"Document.aggregate\",\"AND\",\"OR\",\"NOT\",\"id\",\"content\",\"metadata\",\"createdAt\",\"equals\",\"in\",\"notIn\",\"lt\",\"lte\",\"gt\",\"gte\",\"not\",\"string_contains\",\"string_starts_with\",\"string_ends_with\",\"array_starts_with\",\"array_ends_with\",\"array_contains\",\"contains\",\"startsWith\",\"endsWith\",\"set\",\"increment\",\"decrement\",\"multiply\",\"divide\"]"),
+  graph: "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"
+}
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -37,12 +45,14 @@ async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Modul
 }
 
 config.compilerWasm = {
-  getRuntime: async () => await import("@prisma/client/runtime/query_compiler_bg.postgresql.mjs"),
+  getRuntime: async () => await import("@prisma/client/runtime/query_compiler_fast_bg.postgresql.mjs"),
 
   getQueryCompilerWasmModule: async () => {
-    const { wasm } = await import("@prisma/client/runtime/query_compiler_bg.postgresql.wasm-base64.mjs")
+    const { wasm } = await import("@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs")
     return await decodeBase64AsWasm(wasm)
-  }
+  },
+
+  importName: "./query_compiler_fast_bg.js"
 }
 
 
