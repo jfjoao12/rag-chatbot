@@ -27,7 +27,7 @@ export async function runAgent(options: { input: Record<string, unknown>; config
     )
 
     const agent = createAgent({
-        model: llm,
+        model: llm("google"),
         tools: tools,
         systemPrompt,
         checkpointer,

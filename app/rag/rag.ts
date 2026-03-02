@@ -4,9 +4,35 @@ import { ChatOllama, OllamaEmbeddings } from "@langchain/ollama"
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { PGVectorStore } from "@langchain/community/vectorstores/pgvector"
 import { Pool } from "pg"
+import { CreateAgentParams } from "langchain";
 
 
-
+export const llm = (provider: string) => {
+    let llm;
+    switch (provider) {
+        case "google":
+            return new ChatGoogleGenerativeAI({
+                model: "gemini-3-flash-preview",
+                temperature: 0,
+                maxRetries: 2,
+                streaming: true,
+                apiKey: process.env.GOOGLE_API_KEY!
+            });
+        case "ollama":
+            return new ChatOllama({
+                baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
+                model: process.env.OLLAMA_CHAT_MODEL ?? "qwen3:30b-a3b",
+                temperature: 0,
+                numCtx: 16448,
+                // think: false,
+                // numGpu: 999,
+                // maxRetries: 2,
+            })
+        default: {
+            throw new Error(`Unsupported provider: ${provider}`)
+        }
+    }
+}
 
 // 1. Setup The Postgres Pool
 export const pool = new Pool({
@@ -31,23 +57,8 @@ export const embeddings = new GoogleGenerativeAIEmbeddings({
 })
 
 // 3. Setup Ollama LLM (for generating answers)
-export const llm = new ChatOllama({
-    baseUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
-    model: process.env.OLLAMA_CHAT_MODEL ?? "qwen3:30b-a3b",
-    temperature: 0,
-    numCtx: 16448,
-    // think: false,
-    // numGpu: 999,
-    // maxRetries: 2,
-})
 
-// export const llm = new ChatGoogleGenerativeAI({
-//     model: "gemini-3-flash-preview",
-//     temperature: 0,
-//     maxRetries: 2,
-//     streaming: true,
-//     apiKey: process.env.GOOGLE_API_KEY!
-// });
+
 
 // export const toolAwareLLM = llm.bindTools([
 //     getCurrentTime,
