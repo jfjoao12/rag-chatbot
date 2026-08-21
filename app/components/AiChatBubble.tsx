@@ -1,20 +1,17 @@
 'use client'
 
 import { MessageCircleIcon, X, SendHorizonalIcon } from 'lucide-react'
-import { AIMessage, Message, ToolMessage } from '@langchain/core/messages'
+import type { AIMessage, Message, ToolMessage } from '@langchain/core/messages'
 import { useStream, FetchStreamTransport } from '@langchain/langgraph-sdk/react'
-import { ToolCall } from 'langchain'
+import type { ToolCall } from 'langchain'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import * as z from 'zod'
 import AiChatMessage from './AiChatMessage'
-import { type ToolCallState } from './ToolCall'
 import UserChatMessage from './UserChatMessage'
-import { customEventSchema } from '../ai/tools/tools_utils'
-import { extractTextContent, isAIMessage, isHumanMessage, isToolMessage } from '../utils/ai_utils'
-
-type CustomEvent = z.infer<typeof customEventSchema>
-type CustomEventWithToolId = CustomEvent & { toolCallId?: string; tool_call_id?: string }
+import { customEventSchema } from '@/src/ai/schemas/tool-progress-event.schema'
+import type { CustomEvent, CustomEventWithToolId } from '@/src/ai/types/streaming.types'
+import type { ToolCallState } from '@/src/ai/types/tool-call.types'
+import { extractTextContent, isAIMessage, isHumanMessage, isToolMessage } from '@/src/ai/utils/message.utils'
 
 const resolveToolCallId = (event: CustomEvent, fallbackId: string | null) => {
     const eventWithToolId = event as CustomEventWithToolId
@@ -91,7 +88,7 @@ export default function AiChatBubble() {
             const msg = stream.messages[i];
             if (isAIMessage(msg)) {
                 const ai = msg as AIMessage;
-                const lastToolCall = ai.tool_calls?.[ai.tool_calls.length - 1] as any;
+                const lastToolCall = ai.tool_calls?.[ai.tool_calls.length - 1];
                 if (lastToolCall?.id) {
                     activeToolCallIdRef.current = lastToolCall.id;
                 }
@@ -234,7 +231,7 @@ export default function AiChatBubble() {
                                                 toolCallStates?.flatMap(s => s.toolCall.id ? eventsByToolCallId[s.toolCall.id] ?? [] : []) ?? [];
 
                                             return (
-                                                <div key={(message as any).id ?? index} className="flex flex-col gap-1">
+                                                <div key={message.id ?? index} className="flex flex-col gap-1">
                                                     {hasToolCalls && eventsForThisAiMessage.length > 0 && (
                                                         <AiLiveFeedback messageEvents={eventsForThisAiMessage} />
                                                     )}

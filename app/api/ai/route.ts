@@ -1,11 +1,11 @@
-import { MemorySaver } from "@langchain/langgraph";
 import { NextRequest } from "next/server";
-import { runAgent } from "@/app/ai/agent";
+import { runAgent } from "@/src/ai/agent";
+import type { RunAgentOptions } from "@/src/ai/types/agent.types";
 
 export async function POST(request: NextRequest) {
     try {
         // Parse request body
-        const body = await request.json();
+        const body = (await request.json()) as RunAgentOptions;
 
         // if (!body.apiKey) {
         //     return new Response(
@@ -15,7 +15,11 @@ export async function POST(request: NextRequest) {
         // }
 
         // Get the agent stream
-        return runAgent(body);
+        const stream = await runAgent(body);
+
+        return new Response(stream, {
+            headers: { "Content-Type": "text/event-stream" },
+        });
     } catch (error) {
         return new Response(
             JSON.stringify({
